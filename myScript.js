@@ -1,90 +1,18 @@
-/// Wrap everything so it only runs after the page is loaded
+// ======================
+// Easy Entertainment + Airtable integration
+// ======================
+
+const AIRTABLE_TOKEN = "patgNAzw1vKO0Fkr1";
+const AIRTABLE_BASE_ID = "appd33EXntArOAdoG";
+const AIRTABLE_TABLE_NAME = "Activities"; // EXACT table name
+
+// This will hold activities loaded from Airtable
+let activities = [];
+
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM fully loaded. Initializing Easy Entertainment JS...");
+  console.log("DOM loaded – initializing Easy Entertainment…");
 
-  // ---- Data (mini database) ----
-  const activities = [
-    {
-      id: 1,
-      name: "Downtown Indie Concert Night",
-      location: "San Jose, CA 95112",
-      description:
-        "Live indie bands every Friday night in a cozy downtown venue. Standing room with a small lounge area.",
-      daysHours: "Fri–Sat: 7:00 PM – 11:30 PM",
-      price: 35,
-      availability: "Available",
-      type: "Concert",
-      image:
-        "https://images.pexels.com/photos/144429/pexels-photo-144429.jpeg?auto=compress&cs=tinysrgb&w=800"
-    },
-    {
-      id: 2,
-      name: "Retro Arcade & Pinball",
-      location: "Fremont, CA 94538",
-      description:
-        "Unlimited play on classic arcade machines and modern games. Great for groups and date nights.",
-      daysHours: "Mon–Thu: 3 PM – 10 PM · Fri–Sun: 12 PM – 11 PM",
-      price: 25,
-      availability: "Available",
-      type: "Arcade",
-      image:
-        "https://images.pexels.com/photos/1293261/pexels-photo-1293261.jpeg?auto=compress&cs=tinysrgb&w=800"
-    },
-    {
-      id: 3,
-      name: "Laugh Factory Open Mic",
-      location: "Oakland, CA 94612",
-      description:
-        "Open mic comedy with a mix of new and experienced comedians. Expect some hits and some misses—but always laughs.",
-      daysHours: "Wed–Thu: 8 PM – 10 PM",
-      price: 15,
-      availability: "Limited",
-      type: "Comedy",
-      image:
-        "https://images.pexels.com/photos/2308863/pexels-photo-2308863.jpeg?auto=compress&cs=tinysrgb&w=800"
-    },
-    {
-      id: 4,
-      name: "City Lights Art Museum",
-      location: "San Francisco, CA 94102",
-      description:
-        "Modern and contemporary art museum with rotating exhibits and student discounts on Thursdays.",
-      daysHours: "Tue–Sun: 10 AM – 6 PM",
-      price: 18,
-      availability: "Available",
-      type: "Museum",
-      image:
-        "https://images.pexels.com/photos/208636/pexels-photo-208636.jpeg?auto=compress&cs=tinysrgb&w=800"
-    },
-    {
-      id: 5,
-      name: "Sunset Rooftop Yoga",
-      location: "Hayward, CA 94544",
-      description:
-        "Relaxing rooftop yoga session with a sunset view, perfect for unwinding after a long week.",
-      daysHours: "Sat–Sun: 6 PM – 7:15 PM",
-      price: 20,
-      availability: "Limited",
-      type: "Outdoor",
-      image:
-        "https://images.pexels.com/photos/1051838/pexels-photo-1051838.jpeg?auto=compress&cs=tinysrgb&w=800"
-    },
-    {
-      id: 6,
-      name: "Escape Room: Tech Heist",
-      location: "Santa Clara, CA 95050",
-      description:
-        "Team up with friends to pull off a high-tech heist in this immersive puzzle-based escape room.",
-      daysHours: "Fri–Sun: 12 PM – 10 PM",
-      price: 40,
-      availability: "Available",
-      type: "Outdoor",
-      image:
-        "https://images.pexels.com/photos/2048291/pexels-photo-2048291.jpeg?auto=compress&cs=tinysrgb&w=800"
-    }
-  ];
-
-  // ---- Grab DOM elements safely ----
+  // Grab DOM elements
   const resultsContainer = document.getElementById("resultsContainer");
   const filterForm = document.getElementById("filterForm");
   const quickSearchForm = document.getElementById("quickSearchForm");
@@ -97,36 +25,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultsCountBadge = document.getElementById("resultsCountBadge");
   const yearSpan = document.getElementById("yearSpan");
 
-  // Check that we actually found the important elements
-  console.log("Elements found:", {
-    resultsContainer,
-    filterForm,
-    quickSearchForm,
-    locationInput,
-    typeSelect,
-    maxPriceInput,
-    availabilitySelect,
-    heroLocationInput,
-    heroTypeSelect,
-    resultsCountBadge
-  });
+  // Footer year
+  if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 
-  if (!resultsContainer) {
-    console.error("resultsContainer is missing from the HTML.");
-  }
-
-  // ---- Utility: year in footer ----
-  if (yearSpan) {
-    yearSpan.textContent = new Date().getFullYear();
-  }
-
-  // ---- Rendering function ----
+  // --------------------
+  // Render cards
+  // --------------------
   function renderActivities(list) {
     if (!resultsContainer) return;
 
     resultsContainer.innerHTML = "";
 
-    if (list.length === 0) {
+    if (!list || list.length === 0) {
       resultsContainer.innerHTML =
         '<div class="col-12 text-center text-muted py-4">No results found. Try changing your filters.</div>';
       if (resultsCountBadge) resultsCountBadge.textContent = "0 results";
@@ -156,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${item.availability}
               </span>
             </div>
-            <p class="text-muted small mb-1">${item.location}</p>
+            <p class="text-muted small mb-1">${item.city} · ${item.address}</p>
             <span class="badge text-bg-secondary mb-2">${item.type}</span>
             <p class="card-text small flex-grow-1">
               ${item.description}
@@ -165,9 +75,13 @@ document.addEventListener("DOMContentLoaded", () => {
               <li><strong>Price:</strong> $${item.price.toFixed(2)}</li>
               <li><strong>Days/Hours:</strong> ${item.daysHours}</li>
             </ul>
-            <button class="btn btn-outline-primary btn-sm mt-auto" disabled>
-              Book (demo only)
-            </button>
+            <a
+              href="${item.url}"
+              target="_blank"
+              class="btn btn-outline-primary btn-sm mt-auto"
+            >
+              View Website
+            </a>
           </div>
         </div>
       `;
@@ -181,7 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---- Filtering logic ----
+  // --------------------
+  // Filter logic
+  // --------------------
   function filterActivities(filters) {
     const {
       locationQuery = "",
@@ -190,18 +106,17 @@ document.addEventListener("DOMContentLoaded", () => {
       availability = "any"
     } = filters;
 
-    console.log("Filtering with:", filters);
-
     const normalizedLocation = locationQuery.trim().toLowerCase();
 
     const filtered = activities.filter((activity) => {
-      // price constraint
+      // price
       if (activity.price > maxPrice) return false;
 
-      // location
+      // location / city / address search (ZIP, city name, etc.)
+      const searchableLocation = `${activity.city} ${activity.address}`.toLowerCase();
       if (
         normalizedLocation &&
-        !activity.location.toLowerCase().includes(normalizedLocation)
+        !searchableLocation.includes(normalizedLocation)
       ) {
         return false;
       }
@@ -222,14 +137,68 @@ document.addEventListener("DOMContentLoaded", () => {
     renderActivities(filtered);
   }
 
-  // ---- Initial render (show all) ----
-  filterActivities({});
+  // --------------------
+  // Load from Airtable
+  // --------------------
+  async function loadActivitiesFromAirtable() {
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(
+      AIRTABLE_TABLE_NAME
+    )}?maxRecords=100&view=Grid%20view`;
 
-  // ---- Main filter form ----
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_TOKEN}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error("Error from Airtable:", response.status, response.statusText);
+        renderActivities([]);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Raw Airtable data:", data);
+
+      // Map Airtable records → our app format
+      activities = (data.records || []).map((record) => {
+        const f = record.fields || {};
+        return {
+          id: record.id,
+          name: f["Name"] || "Untitled",
+          city: f["City"] || "",
+          address: f["Address"] || "",
+          description: f["Description"] || "",
+          daysHours: f["Days & Hours"] || "",
+          price: Number(f["Price"] || 0),
+          availability: f["Availability"] || "Available",
+          type: f["Type"] || "Other",
+          url: f["URL"] || "#",
+          image:
+            f["Image"] && Array.isArray(f["Image"]) && f["Image"][0]
+              ? f["Image"][0].url
+              : "https://via.placeholder.com/400x250?text=No+Image"
+        };
+      });
+
+      console.log("Mapped activities:", activities);
+
+      // Initial render
+      filterActivities({});
+    } catch (err) {
+      console.error("Failed to load from Airtable:", err);
+      renderActivities([]);
+    }
+  }
+
+  // --------------------
+  // Hook up forms
+  // --------------------
   if (filterForm) {
     filterForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      console.log("Main Filter form submitted");
+      console.log("Main filter submitted");
 
       const filters = {
         locationQuery: locationInput ? locationInput.value : "",
@@ -244,20 +213,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       filterActivities(filters);
     });
-  } else {
-    console.warn("filterForm not found; main filters will not work.");
   }
 
-  // ---- Hero quick search form ----
   if (quickSearchForm) {
     quickSearchForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      console.log("Hero Quick Search form submitted");
+      console.log("Hero quick search submitted");
 
       const heroLocation = heroLocationInput ? heroLocationInput.value : "";
       const heroType = heroTypeSelect ? heroTypeSelect.value : "all";
 
-      // Optional: mirror into main filters so the UI stays in sync
+      // Mirror into main filters
       if (locationInput) locationInput.value = heroLocation;
       if (typeSelect) typeSelect.value = heroType;
       if (maxPriceInput) maxPriceInput.value = 50;
@@ -270,14 +236,15 @@ document.addEventListener("DOMContentLoaded", () => {
         availability: "any"
       });
 
-      // Smooth scroll to the results section
       const exploreSection = document.getElementById("explore");
       if (exploreSection) {
         exploreSection.scrollIntoView({ behavior: "smooth" });
       }
     });
-  } else {
-    console.warn("quickSearchForm not found; hero quick search will not work.");
   }
+
+  // Actually load data
+  loadActivitiesFromAirtable();
 });
+
 
