@@ -2,7 +2,9 @@
 // Easy Entertainment + Airtable integration
 // ======================
 
-const AIRTABLE_TOKEN = "patgNAzw1vKO0Fkr1";
+// const AIRTABLE_TOKEN = "patgNAzw1vKO0Fkr1";
+const AIRTABLE_TOKEN =
+  "patCdUZGzfafb2IP8.ab0e3d2092768d760e68f7481e2d95d66fbad72fe593eb46e7a6d8c8e005e4a6";
 const AIRTABLE_BASE_ID = "appd33EXntArOAdoG";
 const AIRTABLE_TABLE_NAME = "Activities"; // EXACT table name
 
@@ -103,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       locationQuery = "",
       type = "all",
       maxPrice = 50,
-      availability = "any"
+      availability = "any",
     } = filters;
 
     const normalizedLocation = locationQuery.trim().toLowerCase();
@@ -113,7 +115,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (activity.price > maxPrice) return false;
 
       // location / city / address search (ZIP, city name, etc.)
-      const searchableLocation = `${activity.city} ${activity.address}`.toLowerCase();
+      const searchableLocation =
+        `${activity.city} ${activity.address}`.toLowerCase();
       if (
         normalizedLocation &&
         !searchableLocation.includes(normalizedLocation)
@@ -137,23 +140,52 @@ document.addEventListener("DOMContentLoaded", () => {
     renderActivities(filtered);
   }
 
+  function populateLocationList(activities) {
+    const locationList = document.getElementById("location-list");
+    const heroLocationList = document.getElementById("hero-location-list");
+    if (locationList || heroLocationList) {
+      const uniqueLocations = new Set(
+        activities.map((activity) => activity.city),
+      );
+      const uniqueLocationsArray = Array.from(uniqueLocations);
+      console.log("Unique locations:", uniqueLocationsArray);
+      uniqueLocationsArray.sort();
+      if (heroLocationList) {
+        heroLocationList.value = "";
+        heroLocationList.innerHTML = uniqueLocationsArray
+          .map((location) => `<option>${location}</option>`)
+          .join("");
+      }
+      if (locationList) {
+        locationList.value = "";
+        locationList.innerHTML = uniqueLocationsArray
+          .map((location) => `<option>${location}</option>`)
+          .join("");
+      }
+    }
+  }
+
   // --------------------
   // Load from Airtable
   // --------------------
   async function loadActivitiesFromAirtable() {
     const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(
-      AIRTABLE_TABLE_NAME
+      AIRTABLE_TABLE_NAME,
     )}?maxRecords=100&view=Grid%20view`;
 
     try {
       const response = await fetch(url, {
         headers: {
-          Authorization: `Bearer ${AIRTABLE_TOKEN}`
-        }
+          Authorization: `Bearer ${AIRTABLE_TOKEN}`,
+        },
       });
 
       if (!response.ok) {
-        console.error("Error from Airtable:", response.status, response.statusText);
+        console.error(
+          "Error from Airtable:",
+          response.status,
+          response.statusText,
+        );
         renderActivities([]);
         return;
       }
@@ -174,15 +206,16 @@ document.addEventListener("DOMContentLoaded", () => {
           price: Number(f["Price"] || 0),
           availability: f["Availability"] || "Available",
           type: f["Type"] || "Other",
-          url: f["URL"] || "#",
+          url: f["Web-Site"] || "#",
           image:
             f["Image"] && Array.isArray(f["Image"]) && f["Image"][0]
               ? f["Image"][0].url
-              : "https://via.placeholder.com/400x250?text=No+Image"
+              : "https://via.placeholder.com/400x250?text=No+Image",
         };
       });
 
       console.log("Mapped activities:", activities);
+      populateLocationList(activities);
 
       // Initial render
       filterActivities({});
@@ -203,12 +236,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const filters = {
         locationQuery: locationInput ? locationInput.value : "",
         type: typeSelect ? typeSelect.value : "all",
-        maxPrice: maxPriceInput
-          ? Number(maxPriceInput.value) || 50
-          : 50,
-        availability: availabilitySelect
-          ? availabilitySelect.value
-          : "any"
+        maxPrice: maxPriceInput ? Number(maxPriceInput.value) || 50 : 50,
+        availability: availabilitySelect ? availabilitySelect.value : "any",
       };
 
       filterActivities(filters);
@@ -233,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
         locationQuery: heroLocation,
         type: heroType,
         maxPrice: 50,
-        availability: "any"
+        availability: "any",
       });
 
       const exploreSection = document.getElementById("explore");
@@ -247,4 +276,43 @@ document.addEventListener("DOMContentLoaded", () => {
   loadActivitiesFromAirtable();
 });
 
+// When the DOM is fully loaded, add event listeners to the navbar links
+document.addEventListener("DOMContentLoaded", () => {
+  // Get the navbar collapse element
+  const navbarCollapse = document.querySelector(".navbar-collapse");
 
+  // Get all navbar links including the navbar-brand
+  const navbarLinks = document.querySelectorAll(".navbar a");
+
+  // Add an event listener to each navbar link
+  navbarLinks.forEach((navbarLink) =>
+    navbarLink.addEventListener("click", (event) => {
+      // When a navbar link is clicked, remove the "show" class from the navbar collapse element
+      navbarCollapse.classList.remove("show");
+      // Remove the "active" class from all navbar links
+      navbarLinks.forEach((navbarLink) => {
+        navbarLink.classList.remove("active");
+      });
+      // Add the "active" class to the clicked navbar link
+      event.target.classList.add("active");
+      // Stop the event from propagating to Bootstrap event handlers
+      event.stopPropagation();
+    }),
+  );
+
+  // Add an event listener to the navbar toggle button to handle the click event
+  document
+    .querySelector(".navbar-toggler")
+    .addEventListener("click", (event) => {
+      // When the navbar toggle button is clicked, add the "show" class to the navbar collapse element
+      navbarCollapse.classList.toggle("show");
+      // Stop the event from propagating to the body event handler
+      event.stopPropagation();
+    });
+
+  // Add an event listener to the body to handle the click event
+  document.body.addEventListener("click", () => {
+    // When the body is clicked, remove the "show" class from the navbar collapse element
+    navbarCollapse.classList.remove("show");
+  });
+});
